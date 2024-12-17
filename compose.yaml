@@ -1,0 +1,14 @@
+name: hugo_full_stack_container
+services:
+    cappuchino:
+        build:
+            context: .
+            dockerfile: ./dockerfile
+        ports:
+            - 80:80
+        user: root
+        stdin_open: true
+        tty: true
+        platform: 'linux/amd64'
+        image: hugo_full_stack_container-cappuchino
+        command: /bin/bash

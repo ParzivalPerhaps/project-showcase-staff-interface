@@ -45,8 +45,13 @@ function App() {
   const [displayPrices, setDisplayPrices] = useState<number[]>([]);
 
   const [inventoryChanged, setInventoryChanged] = useState(false);
+  const [staffLogs, setStaffLogs] = useState<any[]>([])
+  const [staffLogsPageVisible, setStaffLogsPageVisible] = useState(false);
+  const [staffLogsPage, setStaffLogsPage] = useState(0);
 
-  const url = 'http://127.0.0.1:4000/api'
+  const [staffLogsPageCount, setStaffLogsPageCount] = useState(0);
+
+  const url = 'https://hugoacdec.com/api' //'http://127.0.0.1:4000/api'
 
   async function login() {
     try {
@@ -71,6 +76,10 @@ function App() {
         setLoggedIn(true);
         setStaffName(nameInput);
         setUsers(u.users);
+
+        if (nameInput == "salas"){
+          await getStaffLogs();
+        }
       }
     } catch (error) {
       
@@ -119,7 +128,8 @@ function App() {
         body: JSON.stringify({
           username: username,
           points: points,
-          deleteLog: deleteLog
+          deleteLog: deleteLog,
+          staffName: nameInput
         })
       });
 
@@ -270,6 +280,37 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
     }
   }
 
+  async function getStaffLogs() {
+    try {
+      setLoading(true)
+
+      const res = await fetch(url + "/gambling/getStaffLogs", {
+        method:"POST", 
+        headers : {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          username: nameInput,
+          accessCode: accessCodeInput,
+          page: staffLogsPage
+        })
+      });
+
+      const u = await res.json();
+
+      if (u.requestSuccess){
+        setStaffLogs(u.staffLogList.reverse());
+        if (u.pageCount > 0) {
+          setStaffLogsPageCount(u.pageCount)
+        }
+      }
+    } catch (error) {
+      
+    } finally {
+      setLoading(false);
+    }
+  }
+
   
   async function applyChanges() {
     try {
@@ -335,11 +376,33 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
             </VStack>
           </Center>
           :
+          staffLogsPageVisible ?
+          <Center>
+            <VStack>
+              <Button onClick={() => {setShopUiEnabled(false); setStaffLogsPageVisible(false); loadProducts()}} style={{marginBottom:'20px'}}>Back to Point Management</Button>
+            
+            
+           {staffLogs && staffLogs.length > 0 && <VStack>
+              
+              {staffLogs.map((v) => {
+                return <div style={{width:'500px'}}><p style={{fontSize:19}}><span style={{color:'#AAAAAA'}}>{v.staffName} - </span>{v.description} - <span style={{color:'#AAAAAA'}}>{new Date(v.date).toLocaleTimeString(undefined, {hour:"2-digit", minute:"2-digit"})}</span></p></div>
+              })}
+            
+            </VStack>}
+
+            <HStack>
+            {staffLogsPage > 0 && <Button onClick={async () => {setStaffLogsPage(staffLogsPage - 1); await getStaffLogs();}} loading={loading}>Prev Page</Button>}
+            {staffLogsPage + 1 < staffLogsPageCount && <Button onClick={async () => {setStaffLogsPage(staffLogsPage + 1); await getStaffLogs()}} loading={loading}>Next Page</Button>}
+            </HStack>
+            </VStack>
+          </Center>
+          :
           !shopUiEnabled ?
           <Center>
              <VStack>
               <h1 style={{marginBottom:'10px'}}>Staff Interface</h1>
               <Button onClick={() => {setShopUiEnabled(true); loadProducts()}} style={{marginBottom:'20px'}}>Take Me To The Shop UI</Button>
+              {nameInput == "salas" && <Button onClick={() => {setStaffLogsPage(0); setStaffLogsPageVisible(true); getStaffLogs()}} style={{marginBottom:'20px'}}>Staff Logs</Button>}
               {users && 
                 <VStack>
                   {users.map((v) => {
@@ -393,7 +456,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                             <HStack style={{left:'0px'}}>
                               <VStack>
                               <p style={{width:'200px'}}><b>{l.shopRelated ? l.winnings < 0 ? 'Spent' : 'Refunded' : l.winnings < 0 ? 'Lost' : 'Won'}</b> {Math.abs(l.winnings)}</p>
-                              {l.time && <p style={{fontSize:12, top:'2px', color:'#AAAAAA', marginTop:'-10px'}}>Bet {new Date(new Date().getTime() - new Date(l.time).getTime()).getMinutes() === 0 && new Date(new Date().getTime() - new Date(l.time).getTime()).getHours() === 0 ? "less than a minute ago" : (new Date(new Date().getTime() - new Date(l.time).getTime()).getHours() > 0 ? new Date(new Date().getTime() - new Date(l.time).getTime()).getHours() + " hours and " : "") + new Date(new Date().getTime() - new Date(l.time).getTime()).getMinutes() + " minutes ago"}</p>}
+                              {l.time && <p style={{fontSize:12, top:'2px', color:'#AAAAAA', marginTop:'-10px'}}>Bet {new Date(l.time).toLocaleTimeString(undefined, {hour:"numeric", minute:"numeric"}) + " - " + new Date(l.time).toLocaleDateString()}</p>}
                               </VStack>
                             
                             <Tooltip positioning={{placement:'right'}} openDelay={0.1} content={"Reverse " + (l.shopRelated ? 'Purchase' : 'Bet') + " (" + (l.winnings < 0 ? 'Add ' + Math.abs(l.winnings).toString() + ' to their account' : 'Remove ' + Math.abs(l.winnings).toString() + ' from their account') + ")"}>
@@ -432,7 +495,12 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
           <Center>
             <VStack>
               <HStack style={{marginTop:'40px'}}>
-                <Button onClick={() => {setInSalesFront(false); loadProducts()}}>Manage Inventory</Button>
+                <Button onClick={() => {setInSalesFront(false); 
+                loadProducts(); 
+                setTransactionStudentIdInput("");
+                setTransactionStarted(false);
+                setCartTotalCost(0);
+                }}>Manage Inventory</Button>
                 <Button onClick={() => {setInSalesFront(true); loadProducts()}}>Manage Sales</Button>
                 <Button onClick={() => {setInSalesFront(false); setShopUiEnabled(false)}}>Return To Point Management</Button>
               </HStack>
@@ -499,10 +567,10 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                           <VStack style={{width:'1200px', padding:'20px'}}>
                             <div style={{minWidth:'95%', backgroundColor:'#FFFFFF', height:'300px', borderRadius:'6px', marginBottom:'100px'}}>
                               <VStack> 
-                                <p style={{color:'black', fontWeight:600, fontSize:30, textAlign:'left', margin:'auto', marginLeft:'2%', marginTop:'1%'}}>Shop Transaction for Student: {transactionStudentIdInput} ({currentCart.length} Items)</p>
+                                <p style={{color:'black', fontWeight:600, fontSize:30, textAlign:'left', margin:'auto', marginLeft:'2%', marginTop:'1%'}}>Shop Transaction for Student: {transactionStudentIdInput} ({currentCart.length} {currentCart.length !== 1 ? "Items" : "Item"})</p>
                                 <div style={{width:'90%', height:'2px', backgroundColor:'black', marginLeft:'0px', left:'0px', marginRight:'6%'}}/>
                                 <HStack style={{width:'1200px'}}>
-                                <div style={{display:'flex', flexWrap:'wrap', textAlign:'left', padding:'20px', fontSize:20, maxHeight:'220px', overflow: 'scroll', scrollbarColor:'#000000', width:'65%', maxWidth:'65%'}}>
+                                <div style={{display:'flex', flexWrap:'wrap', textAlign:'left', padding:'20px', fontSize:20, maxHeight:'220px', minHeight:'220px', overflow: 'scroll', overflowX:'hidden', scrollbarColor:'#000000', width:'65%', maxWidth:'65%'}}>
                                 {currentCart.length > 0 && currentCart.map((v, i) => {
                                     if (currentCart.indexOf(v) !== i){
                                       return <></>
@@ -717,7 +785,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                               
                             
 
-                            <Table.Root size={"md"} borderRadius={20} style={{width:'300px',  margin:'auto', marginBottom:'60px', marginTop:'40px', borderRadius:'20px', height:'90px', backgroundColor:'#494846'}}>
+                            {/*<Table.Root size={"md"} borderRadius={20} style={{width:'300px',  margin:'auto', marginBottom:'60px', marginTop:'40px', borderRadius:'20px', height:'90px', backgroundColor:'#494846'}}>
                                   <Table.Header>
                                       <Table.Row style={{backgroundColor:'#494846', color:'white'}}>
                                       <Table.ColumnHeader style={{color:'white', fontWeight:600}}>Product Name</Table.ColumnHeader>
@@ -743,7 +811,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                                     </Table.Row>)
                                   })}
                                   </Table.Body>
-                          </Table.Root>
+                          </Table.Root>*/}
                           
                           
                           </VStack>
