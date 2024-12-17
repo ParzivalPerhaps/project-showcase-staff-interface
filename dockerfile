@@ -49,7 +49,7 @@ RUN apt-get install -y ufw
 
 RUN echo 'Setting Up File Structure'
 
-COPY /frontend /opt/front-end/
+COPY / /opt/front-end/
 
 RUN npm install -g typescript
 
