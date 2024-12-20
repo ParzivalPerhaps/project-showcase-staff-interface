@@ -57,6 +57,8 @@ function App() {
   const [collectionsAddPointAmount, setCollectionsAddPointAmount] = useState("");
   const [collectionsUser, setCollectionsUser] = useState<any>();
 
+  const [collectionsNoUser, setCollectionsNoUser] = useState(false);
+
   const url = 'https://hugoacdec.com/api' //'http://127.0.0.1:4000/api'
 
   async function login() {
@@ -385,16 +387,20 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
           collectionsUiActive ?
           <Center style={{padding:'20px'}}>
             <VStack>
-              <Button onClick={() => {setShopUiEnabled(false); setStaffLogsPageVisible(false); setCollectionsUiActive(false); loadProducts()}} style={{marginBottom:'20px'}}>Back to Point Management</Button>
+              <Button onClick={() => {setShopUiEnabled(false); setStaffLogsPageVisible(false); setCollectionsUiActive(false); setGamblingLogs([]); login(); setSelectedUser(""); setCollectionsRecord(undefined); setCollectionsUser(""); loadProducts()}} style={{marginBottom:'20px'}}>Back to Point Management</Button>
 
               <p>Collections Lookup</p>
-              <HStack><Input onChange={(e) => {setCollectionsRecord(e.target.value)}} style={{borderColor:'white'}} placeholder='Student ID'/><Button loading={loading} onClick={() => {
+              <HStack><Input disabled={loading} onChange={(e) => {setCollectionsRecord(e.target.value); setCollectionsNoUser(false); setCollectionsUser(undefined); setGamblingLogs([])}} style={{borderColor:'white'}} placeholder='Student ID'/><Button loading={loading} onClick={async () => {
                 if (collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined){
-                  grabGamblingLogs(collectionsRecord);
-                  setCollectionsUser(users.find((n) => {return n.username === collectionsRecord}));
+                  await grabGamblingLogs(collectionsRecord);
+                  const q = users.find((n) => {return n.username === collectionsRecord});
+                  setCollectionsUser(q);
+
+                  if (!q) setCollectionsNoUser(true);
                 }
               }} disabled={!collectionsRecord || !((collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined))}>Pull Record</Button></HStack>
-              {(collectionsRecord && collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined) && <VStack>
+              {collectionsNoUser && <p style={{fontSize:22, color:'#BBBBBB'}}>No records of user with record: {collectionsRecord}</p>}
+              {(collectionsRecord && collectionsUser && collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined) && <VStack>
                   <p>Add Points</p>
                   <HStack>
                   <Input style={{borderColor:'white'}} onChange={(e) => {
@@ -463,7 +469,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
           staffLogsPageVisible ?
           <Center>
             <VStack>
-              <Button onClick={() => {setShopUiEnabled(false); setStaffLogsPageVisible(false); loadProducts()}} style={{marginBottom:'20px'}}>Back to Point Management</Button>
+              <Button onClick={() => {setShopUiEnabled(false); setStaffLogsPageVisible(false); login(); loadProducts()}} style={{marginBottom:'20px'}}>Back to Point Management</Button>
             
             
            {staffLogs && staffLogs.length > 0 && <VStack>
@@ -473,11 +479,6 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
               })}
             
             </VStack>}
-
-            <HStack>
-            {staffLogsPage > 0 && <Button onClick={async () => {setStaffLogsPage(staffLogsPage - 1); await getStaffLogs();}} loading={loading}>Prev Page</Button>}
-            {staffLogsPage + 1 < staffLogsPageCount && <Button onClick={async () => {setStaffLogsPage(staffLogsPage + 1); await getStaffLogs()}} loading={loading}>Next Page</Button>}
-            </HStack>
             </VStack>
           </Center>
           :
@@ -499,7 +500,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                         <HStack style={{padding:'10px'}}>
                           <p style={{textAlign:'left', paddingLeft:'10px'}}>{v.username}</p>
                           <HStack style={{justifyContent:'right', margin:'auto', marginRight:'0px'}}>
-                            <p style={{textAlign:'right', marginRight:'0px'}}>{v.balance}</p>
+                            <p style={{textAlign:'right', marginRight:'0px'}}>{v.balance.toLocaleString()}</p>
                             <Button onClick={() => {
                               setGamblingLogs([]);
                               grabGamblingLogs(v.username);
@@ -656,11 +657,11 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                           <VStack style={{width:'1200px', padding:'20px'}}>
                             <div style={{minWidth:'95%', backgroundColor:'#FFFFFF', height:'300px', borderRadius:'6px', marginBottom:'100px'}}>
                               <VStack> 
-                                <p style={{color:'black', fontWeight:600, fontSize:30, textAlign:'left', margin:'auto', marginLeft:'2%', marginTop:'1%'}}>Shop Transaction for Student: {transactionStudentIdInput} ({currentCart.length} {currentCart.length !== 1 ? "Items" : "Item"})</p>
+                                <p style={{color:'black', fontWeight:600, fontSize:30, textAlign:'left', margin:'auto', marginLeft:'2%', marginTop:'1%'}}>Shop Transaction for Student: {transactionStudentIdInput} {currentCart ? ((currentCart.length) + (currentCart.length !== 1 ? " Items" : " Item")) : ""}</p>
                                 <div style={{width:'90%', height:'2px', backgroundColor:'black', marginLeft:'0px', left:'0px', marginRight:'6%'}}/>
                                 <HStack style={{width:'1200px'}}>
                                 <div style={{display:'flex', flexWrap:'wrap', textAlign:'left', padding:'20px', fontSize:20, maxHeight:'220px', minHeight:'220px', overflow: 'scroll', overflowX:'hidden', scrollbarColor:'#000000', width:'65%', maxWidth:'65%'}}>
-                                {currentCart.length > 0 && currentCart.map((v, i) => {
+                                {currentCart && currentCart.length > 0 && currentCart.map((v, i) => {
                                     if (currentCart.indexOf(v) !== i){
                                       return <></>
                                     }
@@ -723,7 +724,8 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                               loadProducts();
                               setTransactionStudentIdInput("");
                               setTransactionStarted(false);
-                              setCartTotalCost(0)
+                              setCartTotalCost(0);
+                              setCurrentCart([]);
                             }}>Cancel Transaction</Button>
                                   <Button style={{backgroundColor:'#000000', color:'white', width:'200px'}} disabled={transactionStudent.balance - cartTotalCost < 0} onClick={() => {
                             let seenProducts:any[] = []
@@ -747,7 +749,8 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                             loadProducts();
                             setTransactionStudentIdInput("");
                             setTransactionStarted(false);
-                            setCartTotalCost(0)
+                            setCartTotalCost(0);
+                            setCurrentCart([]);
                             
                           }}>Checkout</Button>
                                 </VStack>
@@ -759,7 +762,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                             
 
                               {
-                                products.length > 0 && products.map((v, i) => {
+                                products && products.length > 0 && products.map((v, i) => {
                                   const a = products[i];
                                   const b = products[i + 1];
                                   const c = products[i + 2];
@@ -914,6 +917,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                               setCartTotalCost(0)
 
                               if (q === true){
+                                await loadProducts();
                                 setTransactionStarted(true);
                               }
                               

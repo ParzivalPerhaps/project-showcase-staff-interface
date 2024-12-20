@@ -6,6 +6,7 @@ import reportWebVitals from './reportWebVitals';
 import { Provider } from './components/ui/provider';
 import { BrowserRouter, Route, Routes } from "react-router";
 import BetViewer from './BetViewer';
+import InventoryViewer from './InventoryViewer';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -16,6 +17,7 @@ root.render(
     <BrowserRouter>
     <Routes>
       <Route path="/betViewer" element={<BetViewer />} />
+      <Route path="/inventoryViewer" element={<InventoryViewer />} />
       <Route path="/*" element={<App/>}/>
     </Routes>
   </BrowserRouter>

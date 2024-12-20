@@ -56,11 +56,8 @@ function App() {
   const [collectionsRecord, setCollectionsRecord] = useState<any>(undefined);
   const [collectionsAddPointAmount, setCollectionsAddPointAmount] = useState(0);
 
-  const [userLogs, setUserLogs] = useState<any[]>([]);
-  const [displayLogs, setDisplayLogs] = useState<any[]>([]);
-
-  const [lastCall, setLastCall] = useState(new Date());
-  const [val, setVal] = useState(0);
+  const [inventory, setInventory] = useState<any[]>([]);
+  const [scrollPosition, setScrollPosition] = useState(0);
 
   const url = 'https://hugoacdec.com/api' //'http://127.0.0.1:4000/api'
 
@@ -87,23 +84,6 @@ function App() {
         setLoggedIn(true);
         setStaffName(nameInput);
         setUsers(u.users);
-
-        let q = [];
-
-        for (let i = 0; i < u.users.length; i++){
-            const b = await grabGamblingLogs(u.users[i].username);
-            
-            q[i] = b;
-        }
-
-        m = q;
-        
-        setUserLogs(q);
-        
-        
-        if (nameInput == "salas"){
-          await getStaffLogs();
-        }
       }
     } catch (error) {
       
@@ -384,87 +364,28 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
     
   }
 
-  function sleep(milliseconds:number) {
-    var start = new Date().getTime();
-    for (var i = 0; i < 1e7; i++) {
-      if ((new Date().getTime() - start) > milliseconds){
-        break;
-      }
-    }
-  }
+  async function update(scrollPos: number, goingUp: boolean) {
+        await loadProducts();
 
-  async function update(logsBefore: any[], displayLogsRec: any[]) {
-        const u = (await (await fetch(url + "/gambling/staffLogin", {
-            method:"POST", 
-            headers : {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              username: "hayden",
-              accessCode: "AF82C"
-            })
-          })).json()).users;
+        window.scroll({ behavior: 'smooth', top:scrollPos})
 
-        let logsAfter = [];
-
-        for (let i = 0; i < u.length; i++) {
-            logsAfter[i] = (await (await fetch(url + "/gambling/staffGamblingLogs", {
-                method:"POST", 
-                headers : {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  username: u[i].username,
-                  accessCode: "AF82C"
-                })
-              })).json()).logs;
-
-              if (logsBefore[i]) console.log(logsAfter[i].length  + " : " + logsBefore[i].length);
-        }
+        // 3105
         
-
-        const newLogs:any[] = [];
-
-        for (let i = 0; i < logsBefore.length; i++) {
-            if (logsAfter[i].length !== logsBefore[i].length){
-                
-                
-                
-                newLogs.push(logsAfter[i][logsAfter[i].length - 1]);
-            }
-        }
-
-        if (newLogs.length > 0) {
-            const o = newLogs;
-
-            displayLogsRec = displayLogsRec.concat(o);
-            setDisplayLogs(displayLogsRec);
-        }
-        
-
-        if (displayLogsRec.length > 14){
-            displayLogsRec = displayLogsRec.slice(1);
-        }
-
-        
-
-        setDisplayLogs(displayLogsRec);
-
-        setUserLogs(logsAfter);
-
-        setVal(val + 1);
+        if (scrollPos <= 50 && goingUp) goingUp = false;
+        if (scrollPos >= 3105 && !goingUp) goingUp = true;
 
         setTimeout(() => {
-            update(logsAfter, displayLogsRec);
+            update(scrollPos + (50 * (goingUp ? -1 : 1)), goingUp);
         }, 1000);
   }
 
   async function start() {
     await setNameInput("hayden");
     await setAccessCodeInput("AF82C")
-    await login();
     
-    update(userLogs, []);
+    update(5, false);
+
+    
   }
 
   useEffect(() => {
@@ -475,26 +396,93 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
   return (
       <div className="App">
         <header className="App-header">
-            
-            <VStack>
-                <Center>
-                    <VStack>
-                        <p style={{fontWeight:600}}>Recent Bets</p>
-                        <div style={{maxWidth:'450px', display:'flex', flexWrap:'wrap', justifyContent:'center'}}>
-                            <Center>
-                                {displayLogs.length > 0 && <div style={{marginLeft:'5px', marginRight:'5px'}}>{displayLogs.map((v) => {
-                                    return (v.winnings !== 0 ? <p>{v.username} <b>{v.winnings > 0 ? "Won" : "Lost"}</b> {Math.abs(v.winnings).toLocaleString()} points</p> : <></>)
-                                })}</div>}
-                            </Center>
-                            
-                        </div>
+            <div style={{padding:'20px'}}>
+        {
+            products.length > 0 && products.map((v, i) => {
+                const a = products[i];
+                const b = products[i + 1];
+                const c = products[i + 2];
 
-                    </VStack>
-                
-                </Center>
-                
-                
-            </VStack>
+                return (
+                i % 3 === 0 ? <HStack style={{minWidth:'1100px', maxWidth:'1100px', marginBottom:'10px'}}>
+                    {a && <Card.Root borderRadius={'4px'} style={{backgroundColor:'#FFFFFF', color:'black', width:'33%', minHeight:'290px'}}>
+                    <Card.Header style={{backgroundColor:'#FFFFFF', padding:'10px', borderRadius:'4px', fontWeight:600}}>
+                        <p style={{fontSize:24}}>{a.productName}</p>
+                        <HStack>
+                            {a.quantity <= 0 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Out of Stock</Badge>}
+                            {a.quantity > 0 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>In Stock</Badge>}
+                            {a.quantity > 15 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>High Quantity</Badge>}
+                            {a.quantity < 5 && a.quantity > 0  &&<Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Limited Supply</Badge> }
+                            {a.amountSold > 10 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Popular Item</Badge>}
+                        </HStack>
+                        
+                        </Card.Header>
+                        <Card.Body>
+                        <VStack style={{textAlign:'left',justifyContent:'left',  margin:'auto', padding:'auto', marginLeft:'0px'}}>
+                            <p style={{width:'200px', fontWeight:600}}>{a.price.toLocaleString(undefined, { minimumFractionDigits: 0 }) + " points"}</p>
+                            <p style={{width:'200px'}}>{a.quantity + " " + (a.quantity !== 1 ? "items" : "item")}</p>
+                        </VStack>
+                        
+                        </Card.Body>
+                        <Card.Footer>
+                            <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>{a.amountSold} Sold</Badge>
+                        </Card.Footer>
+                    
+                    </Card.Root>}
+                    {b && <Card.Root borderRadius={'4px'} style={{backgroundColor:'#FFFFFF', color:'black', width:'33%', minHeight:'290px'}}>
+                    <Card.Header style={{backgroundColor:'#FFFFFF', padding:'10px', borderRadius:'4px', fontWeight:600}}>
+                        <p style={{fontSize:24}}>{b.productName}</p>
+                        <HStack>
+                            {b.quantity <= 0 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Out of Stock</Badge>}
+                            {b.quantity > 0 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>In Stock</Badge>}
+                            {b.quantity > 15 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>High Quantity</Badge>}
+                            {b.quantity < 5 && b.quantity > 0 &&<Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Limited Supply</Badge> }
+                            {b.amountSold > 10 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Popular Item</Badge>}
+                        </HStack>
+                        
+                        </Card.Header>
+                        <Card.Body>
+                        <VStack style={{textAlign:'left',justifyContent:'left',  margin:'auto', padding:'auto', marginLeft:'0px'}}>
+                            <p style={{width:'200px', fontWeight:600}}>{b.price.toLocaleString(undefined, { minimumFractionDigits: 0 }) + " points"}</p>
+                            <p style={{width:'200px'}}>{b.quantity + " " + (b.quantity !== 1 ? "items" : "item")}</p>
+                        </VStack>
+                        
+                        </Card.Body>
+                        <Card.Footer>
+                            <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>{b.amountSold} Sold</Badge>
+                        </Card.Footer>
+                    
+                    </Card.Root>}
+                    {c && <Card.Root borderRadius={'4px'} style={{backgroundColor:'#FFFFFF', color:'black', width:'33%', minHeight:'290px'}}>
+                    <Card.Header style={{backgroundColor:'#FFFFFF', padding:'10px', borderRadius:'4px', fontWeight:600}}>
+                        <p style={{fontSize:24}}>{c.productName}</p>
+                        <HStack>
+                            {c.quantity <= 0 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Out of Stock</Badge>}
+                            {c.quantity > 0 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>In Stock</Badge>}
+                            {c.quantity > 15 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>High Quantity</Badge>}
+                            {c.quantity < 5 && c.quantity > 0  &&<Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Limited Supply</Badge> }
+                            {c.amountSold > 10 && <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>Popular Item</Badge>}
+                        </HStack>
+                        
+                        </Card.Header>
+                        <Card.Body>
+                        <VStack style={{textAlign:'left',justifyContent:'left',  margin:'auto', padding:'auto', marginLeft:'0px'}}>
+                            <p style={{width:'200px', fontWeight:600}}>{c.price.toLocaleString(undefined, { minimumFractionDigits: 0 }) + " points"}</p>
+                            <p style={{width:'200px'}}>{c.quantity + " " + (c.quantity !== 1 ? "items" : "item")}</p>
+                        </VStack>
+                        
+                        </Card.Body>
+                        <Card.Footer>
+                            <Badge style={{width:'fit-content', padding:'4px', paddingRight:'8px', paddingLeft:'8px', textAlign:'center'}}>{c.amountSold} Sold</Badge>
+                        </Card.Footer>
+                    
+                    </Card.Root>}
+                    </HStack>
+                :
+                <></>
+                )})
+            }
+            </div>
             
         </header>
     </div>
