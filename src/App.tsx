@@ -12,6 +12,7 @@ import {Tooltip} from './components/ui/tooltip'
 import {Tab, TabList, TabPanel, TabPanels, Tabs} from "@chakra-ui/tabs"
 import { NumberInput } from '@chakra-ui/number-input';
 import { LuArrowDown, LuArrowLeft, LuArrowRight, LuMinus, LuPlus } from 'react-icons/lu';
+import { isNumberObject } from 'util/types';
 
 
 function App() {
@@ -50,6 +51,11 @@ function App() {
   const [staffLogsPage, setStaffLogsPage] = useState(0);
 
   const [staffLogsPageCount, setStaffLogsPageCount] = useState(0);
+  const [collectionsUiActive, setCollectionsUiActive] = useState(false);
+
+  const [collectionsRecord, setCollectionsRecord] = useState<any>(undefined);
+  const [collectionsAddPointAmount, setCollectionsAddPointAmount] = useState("");
+  const [collectionsUser, setCollectionsUser] = useState<any>();
 
   const url = 'https://hugoacdec.com/api' //'http://127.0.0.1:4000/api'
 
@@ -376,6 +382,84 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
             </VStack>
           </Center>
           :
+          collectionsUiActive ?
+          <Center style={{padding:'20px'}}>
+            <VStack>
+              <Button onClick={() => {setShopUiEnabled(false); setStaffLogsPageVisible(false); setCollectionsUiActive(false); loadProducts()}} style={{marginBottom:'20px'}}>Back to Point Management</Button>
+
+              <p>Collections Lookup</p>
+              <HStack><Input onChange={(e) => {setCollectionsRecord(e.target.value)}} style={{borderColor:'white'}} placeholder='Student ID'/><Button loading={loading} onClick={() => {
+                if (collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined){
+                  grabGamblingLogs(collectionsRecord);
+                  setCollectionsUser(users.find((n) => {return n.username === collectionsRecord}));
+                }
+              }} disabled={!collectionsRecord || !((collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined))}>Pull Record</Button></HStack>
+              {(collectionsRecord && collectionsRecord.length === 6 && (collectionsRecord as number) !== undefined) && <VStack>
+                  <p>Add Points</p>
+                  <HStack>
+                  <Input style={{borderColor:'white'}} onChange={(e) => {
+                      setCollectionsAddPointAmount(e.target.value);
+                  }} placeholder='Amount' type='number'/>
+                  <Button loading={loading} onClick={async () => {
+                    if (isNaN(Number.parseInt(collectionsAddPointAmount))) return;
+
+                      await addPoints(collectionsRecord, Number.parseInt(collectionsAddPointAmount));
+
+                      setUsers(users.map((c) => {
+                        if (c.username == collectionsRecord){
+                          c.balance += collectionsAddPointAmount;
+                          return c;
+                        }else{
+                          return c;
+                        }
+                      
+                      }));
+
+                      await grabGamblingLogs(collectionsRecord);
+
+                  }}>Add Points</Button>
+                  </HStack>
+                </VStack>}
+              <HStack>
+                <VStack style={{marginTop:'20px'}}>
+                  {collectionsUser && <p><b>Balance</b>: {collectionsUser.balance.toLocaleString()}</p>}
+                {gamblingLogs && gamblingLogs.length > 0 && gamblingLogs.map((l) => {
+                          if (l.winnings === 0) return <></>
+                          return <div style={{marginLeft:'-20px', left:'0px', marginBottom:'10px'}}>
+              
+                            <HStack style={{left:'0px'}}>
+                              <VStack>
+                              <p style={{width:'200px'}}><b>{l.shopRelated ? l.winnings < 0 ? 'Spent' : 'Refunded' : l.winnings < 0 ? 'Lost' : 'Won'}</b> {Math.abs(l.winnings)}</p>
+                              {l.time && <p style={{fontSize:12, top:'2px', color:'#AAAAAA', marginTop:'-10px'}}>Bet {new Date(l.time).toLocaleTimeString(undefined, {hour:"numeric", minute:"numeric"}) + " - " + new Date(l.time).toLocaleDateString()}</p>}
+                              </VStack>
+                            
+                            <Tooltip positioning={{placement:'right'}} openDelay={0.1} content={"Reverse " + (l.shopRelated ? 'Purchase' : 'Bet') + " (" + (l.winnings < 0 ? 'Add ' + Math.abs(l.winnings).toString() + ' to their account' : 'Remove ' + Math.abs(l.winnings).toString() + ' from their account') + ")"}>
+                              <IconButton disabled={loading} style={{}} onClick={async () => {
+                                await addPoints(collectionsRecord, -(l.winnings as number), l._id);
+                                setUsers(users.map((c) => {
+                                  if (c.username == collectionsRecord){
+                                    c.balance += (-(l.winnings as number));
+                                    return c;
+                                  }else{
+                                    return c;
+                                  }
+                                
+                                }))
+                                await grabGamblingLogs(collectionsRecord);
+                              }}><PiX/></IconButton>
+                            </Tooltip>
+                          </HStack>
+                          
+
+
+                          </div>
+                        })}
+                </VStack>
+              </HStack>
+            </VStack>
+          </Center>
+          :
+
           staffLogsPageVisible ?
           <Center>
             <VStack>
@@ -401,7 +485,11 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
           <Center>
              <VStack>
               <h1 style={{marginBottom:'10px'}}>Staff Interface</h1>
+              <HStack>
               <Button onClick={() => {setShopUiEnabled(true); loadProducts()}} style={{marginBottom:'20px'}}>Take Me To The Shop UI</Button>
+              <Button onClick={() => {setCollectionsUiActive(true); setGamblingLogs([]); setSelectedUser("")}} style={{marginBottom:'20px'}}>Take Me To Collections UI</Button>
+              </HStack>
+              
               {nameInput == "salas" && <Button onClick={() => {setStaffLogsPage(0); setStaffLogsPageVisible(true); getStaffLogs()}} style={{marginBottom:'20px'}}>Staff Logs</Button>}
               {users && 
                 <VStack>
@@ -495,14 +583,15 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
           <Center>
             <VStack>
               <HStack style={{marginTop:'40px'}}>
-                <Button onClick={() => {setInSalesFront(false); 
+                <Button onClick={() => {
+                setInSalesFront(false); 
                 loadProducts(); 
                 setTransactionStudentIdInput("");
                 setTransactionStarted(false);
                 setCartTotalCost(0);
                 }}>Manage Inventory</Button>
                 <Button onClick={() => {setInSalesFront(true); loadProducts()}}>Manage Sales</Button>
-                <Button onClick={() => {setInSalesFront(false); setShopUiEnabled(false)}}>Return To Point Management</Button>
+                <Button onClick={() => {setInSalesFront(false); setShopUiEnabled(false); login();}}>Return To Point Management</Button>
               </HStack>
 
               {!inSalesFront ? <><p style={{marginTop:'20px'}}>Manage Inventory</p>
@@ -522,7 +611,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                                   </Table.Header>
                                   <Table.Body>
                                   {products.length > 0 && products.map((v, m) => {
-                                    return (<Table.Row><Table.Cell>{v.productName}</Table.Cell>
+                                    return (<Table.Row style={{backgroundColor:'#111111', color:'white'}}><Table.Cell>{v.productName}</Table.Cell>
                                     {displayAmounts && <Table.Cell>{displayAmounts && <Input readOnly={loading} type='number' onChange={async (e) => {
                                       let a = e.target.value === "" ? 0 : Number.parseInt(e.target.value);
                                       
@@ -692,7 +781,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                                           <Card.Body>
                                           <VStack style={{textAlign:'left',justifyContent:'left',  margin:'auto', padding:'auto', marginLeft:'0px'}}>
                                               <p style={{width:'200px'}}>{a.price.toLocaleString(undefined, { minimumFractionDigits: 0 }) + " points"}</p>
-                                              <p style={{width:'200px'}}>{a.quantity + " " + (a.quantity > 1 ? "items" : "item")}</p>
+                                              <p style={{width:'200px'}}>{a.quantity + " " + (a.quantity !== 1 ? "items" : "item")}</p>
                                             </VStack>
                                             
                                           </Card.Body>
@@ -725,7 +814,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                                           <Card.Body>
                                             <VStack style={{textAlign:'left',justifyContent:'left',  margin:'auto', padding:'auto', marginLeft:'0px'}}>
                                               <p style={{width:'200px'}}>{b.price.toLocaleString(undefined, { minimumFractionDigits: 0 }) + " points"}</p>
-                                              <p style={{width:'200px'}}>{b.quantity + " " + (b.quantity === 1 ? "items" : "item")}</p>
+                                              <p style={{width:'200px'}}>{b.quantity + " " + (b.quantity !== 1 ? "items" : "item")}</p>
                                             </VStack>
                                             
                                           </Card.Body>
@@ -758,7 +847,7 @@ async function modifyProductPrice(props: ModifyProductPriceBody) {
                                           <Card.Body>
                                           <VStack style={{textAlign:'left',justifyContent:'left',  margin:'auto', padding:'auto', marginLeft:'0px'}}>
                                               <p style={{width:'200px'}}>{c.price.toLocaleString(undefined, { minimumFractionDigits: 0 }) + " points"}</p>
-                                              <p style={{width:'200px'}}>{c.quantity + " " + (c.quantity > 1 ? "items" : "item")}</p>
+                                              <p style={{width:'200px'}}>{c.quantity + " " + (c.quantity !== 1 ? "items" : "item")}</p>
                                             </VStack>
                                             
                                           </Card.Body>

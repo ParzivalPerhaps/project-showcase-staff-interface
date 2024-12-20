@@ -4,6 +4,8 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { Provider } from './components/ui/provider';
+import { BrowserRouter, Route, Routes } from "react-router";
+import BetViewer from './BetViewer';
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -11,7 +13,12 @@ const root = ReactDOM.createRoot(
 root.render(
   <React.StrictMode>
     <Provider>
-      <App />
+    <BrowserRouter>
+    <Routes>
+      <Route path="/betViewer" element={<BetViewer />} />
+      <Route path="/*" element={<App/>}/>
+    </Routes>
+  </BrowserRouter>
     </Provider>
   </React.StrictMode>
 );
