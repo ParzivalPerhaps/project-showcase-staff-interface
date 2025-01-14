@@ -1,46 +1,27 @@
-# Getting Started with Create React App
+# EHS Project Showcase Staff Interface
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This React app is intended for the Emerson High School CS Department Project Showcase for administrating the 'maverick casino'
 
-## Available Scripts
+## Contributing
 
-In the project directory, you can run:
+Current members of Frisco ISD CTE Faculty and Emerson Computer Science Club Members are welcome to contribute, create a pull request, include your relation to EHS/Frisco ISD and the changes will be reviewed.
 
-### `npm start`
+### Setup Environment
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+To setup a development environment for the repo, make sure [git]([url](git-scm.com/book/en/v2/Getting-Started-Installing-Git)) is installed, open a terminal in an empty directory where you'd like the project to be, and run `git clone https://github.com/ParzivalPerhaps/project-showcase-staff-interface` and then access the folder by running `cd project-showcase-staff-interface`.
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+Then make sure [node and npm]([url](nodejs.org/en/download)) is installed, and run `npm i` to install all necessary dependencies.
 
-### `npm test`
+Use `npm start` to start a local development environment that will likely open on localhost:3000, changes will be reflected there as you save changes to files in the project.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Operating
 
-### `npm run build`
+To update, pull/push relevant changes into `main` and it will automatically deploy, to find the new url check the deployment output/status.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+There is currently no domain associated with the interface.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Support
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
-
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
+#### If you have any problems/questions reach out to: 
+hayden.karp.876@k12.friscoisd.org
+salasal@friscoisd.org
