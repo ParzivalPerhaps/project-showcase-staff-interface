@@ -16,7 +16,7 @@ Use `npm start` to start a local development environment that will likely open o
 
 ## Operating
 
-To update, pull/push relevant changes into `main` and it will automatically deploy, to find the new url check the deployment output/status.
+To update, pull/push relevant changes into `main` and ask one of the maintainers to deploy it manually (temporary measure).
 
 There is currently no domain associated with the interface.
 
